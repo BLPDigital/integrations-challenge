@@ -1,0 +1,6 @@
+file,line,record_ordinal,dataset,natural_key,outcome,twin_id,version,code,field,message,raw_excerpt_sha256
+suppliers.csv,2,1,supplier,0000000417,accepted,twn_2915577e0c1c7c26,1,,,,d079d5079500e1f73670141607f8f6b8c56690a72f01e31dc79db2b99b7fa460
+suppliers.csv,3,2,supplier,0000417,accepted,twn_84a08a994cb9ba42,1,,,,3c258cc1939d96f3209c58c30634531e4cdea1e32d12895fa430c59a1ef67b3e
+suppliers.csv,4,3,supplier,0000000418,accepted,twn_1f6beb7039517da2,1,,,,4111c444b41f53bc8945825dab0692e55134ab127cf47e9a6fdba25149ab4fef
+cost_centers.csv,2,1,cost_center,0815,accepted,twn_05013663bcc594f7,1,,,,f73d20107021f2c91fce53ec8c8b0dedd492366667655bde935eaed0ed2b6414
+cost_centers.csv,3,2,cost_center,815,accepted,twn_40a3baaccdd8aa75,1,,,,14fe078ef51a7292a5e88f6d179b59715dd708fc0a45fb422c45d367649af6b7

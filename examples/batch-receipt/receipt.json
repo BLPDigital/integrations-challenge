@@ -1,0 +1,79 @@
+{
+  "batch_id": "example-batch-0001",
+  "batch_ref": "example-batch-0001",
+  "channel": "file",
+  "run_id": "run_example",
+  "tenant": "acme-ch",
+  "source_system": "erp-prod",
+  "producer": "examples/batch",
+  "sequence": 0,
+  "mode": "upsert",
+  "full_load": false,
+  "on_error": "continue",
+  "profiles": [
+    "blp-canonical-v1"
+  ],
+  "manifest_sha256": "6da350eaa9b7df55d59e8c6eaca6a08ecd3e00756c24cd613328afdcf6f583ca",
+  "received_scan": 1,
+  "batch_status": "accepted",
+  "replay": false,
+  "codes": [],
+  "counts": {
+    "seen": 5,
+    "accepted": 5,
+    "accepted_with_warning": 0,
+    "rejected": 0,
+    "skipped_unchanged": 0,
+    "quarantined": 0,
+    "replayed": 0
+  },
+  "files": [
+    {
+      "path": "suppliers.csv",
+      "dataset": "supplier",
+      "format": "csv",
+      "profile": "blp-canonical-v1",
+      "encoding": "UTF-8",
+      "declared_records": 3,
+      "parsed_records": 3,
+      "sha256": "af3f332b8eeae4a0fa32531cd2741238505646a6b19aeddf960e0e2c624b2a9a",
+      "status": "accepted",
+      "codes": [],
+      "counts": {
+        "seen": 3,
+        "accepted": 3,
+        "accepted_with_warning": 0,
+        "rejected": 0,
+        "skipped_unchanged": 0,
+        "quarantined": 0,
+        "replayed": 0
+      }
+    },
+    {
+      "path": "cost_centers.csv",
+      "dataset": "cost_center",
+      "format": "csv",
+      "profile": "blp-canonical-v1",
+      "encoding": "UTF-8",
+      "declared_records": 2,
+      "parsed_records": 2,
+      "sha256": "77f271b5db21cb29607b40d17c858ccc96ff54ce6d0b70dc55af3392b689b33d",
+      "status": "accepted",
+      "codes": [],
+      "counts": {
+        "seen": 2,
+        "accepted": 2,
+        "accepted_with_warning": 0,
+        "rejected": 0,
+        "skipped_unchanged": 0,
+        "quarantined": 0,
+        "replayed": 0
+      }
+    }
+  ],
+  "findings": [],
+  "proposals_emitted": [],
+  "exceptions_opened": [],
+  "closure_ok": true,
+  "virtual_clock_ms": 0
+}

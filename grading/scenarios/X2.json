@@ -1,0 +1,159 @@
+{
+  "id": "X2",
+  "visibility": "stretch",
+  "title": "scale: the same night, three times the data",
+  "purpose": "The S1 dataset multiplied by three (36'000 suppliers, 4'200 cost centers, 24'000 purchase orders, 79'200 order lines, 15'000 invoices, 44'400 invoice lines) against a request quota that is only twice S1's. The rate table is NOT multiplied, because a rate table does not grow with the number of invoices and its row count is a published property of the SOAP channel. What this scenario measures is whether the connector streams or slurps: three times the records inside twice the requests forces batching, and the peak resident set of the process says whether the whole delivery was held in memory to get there. The 512 MiB figure is a NOTE and not a kill: a cap enforced by the kernel punishes a runtime for reserving address space, and BUILD-SPEC 17.4 forbids that from costing a candidate anything. Worth zero points, recorded as a tie-break note.",
+  "seed_scenario": "X2",
+  "seed": 20261015,
+  "erp_quota": 2400,
+  "twin_quota": 900,
+  "chaos": false,
+  "reference_importer": true,
+  "golden": {
+    "state_digest": "2d8f1a2a00db1e2f6fe0435a955739aa1dfcf2532e73cb31b46bf04d4e7da1b8",
+    "digest_pinned_by": "reference run reviewed 2026-09-01 at seed 20261015: 2'100 open exceptions and 12'900 documents, both exactly three times S1's and both matching the independently derived expectation, 632 of 2'400 ERP requests and 43 of 900 twin requests used. Peak resident set 384 MiB against the 512 MiB note, which is the number worth knowing about this scenario: the reference connector's memory grows with the dataset (142 MiB at S1's volume, 384 MiB at three times it), so it passes the note with a quarter to spare rather than comfortably. That is the signal X2 exists to produce, and it applies to our own connector too."
+  },
+  "steps": [
+    {
+      "kind": "reset"
+    },
+    {
+      "kind": "seed",
+      "note": "the X2 dataset: S1 multiplied, the rate table left alone"
+    },
+    {
+      "kind": "run_connector",
+      "phase": "a",
+      "timeout_s": 1800,
+      "note": "1800 seconds of harness safety timeout, not a performance target: nothing about wall-clock runtime is scored anywhere in this artifact"
+    },
+    {
+      "kind": "scan"
+    },
+    {
+      "kind": "assert",
+      "assert": {
+        "id": "X2.exit",
+        "group": "stretch",
+        "points": 0,
+        "level": "info",
+        "kind": "exit_code_in",
+        "title": "the run exits 0 or 2"
+      }
+    },
+    {
+      "kind": "assert",
+      "assert": {
+        "id": "X2.digest",
+        "group": "stretch",
+        "points": 0,
+        "level": "info",
+        "kind": "state_digest",
+        "title": "three times the data reaches its own pinned digest",
+        "why": "scale is not allowed to change what arrives, only how it is moved"
+      }
+    },
+    {
+      "kind": "assert",
+      "assert": {
+        "id": "X2.exceptions",
+        "group": "stretch",
+        "points": 0,
+        "level": "info",
+        "kind": "exceptions_set_exactly",
+        "title": "the open exception queue is exactly the expected set at three times the volume",
+        "why": "the exception rate is a property of the data, so multiplying the data multiplies the queue. A connector that starts guessing under load shows up here first"
+      }
+    },
+    {
+      "kind": "assert",
+      "assert": {
+        "id": "X2.documents",
+        "group": "stretch",
+        "points": 0,
+        "level": "info",
+        "kind": "erp_document_set",
+        "title": "one document per invoice the data says should post"
+      }
+    },
+    {
+      "kind": "assert",
+      "assert": {
+        "id": "X2.pending",
+        "group": "stretch",
+        "points": 0,
+        "level": "info",
+        "kind": "proposal_status_count",
+        "args": {
+          "pending_zero": true
+        },
+        "title": "nothing was left pending"
+      }
+    },
+    {
+      "kind": "assert",
+      "assert": {
+        "id": "X2.budget",
+        "group": "stretch",
+        "points": 0,
+        "level": "info",
+        "kind": "request_budget",
+        "title": "three times the data inside twice S1's quota",
+        "why": "this is the scale test with teeth: 2'400 ERP requests for three times the master data is only reachable by asking for pages and posting batches, never one record per request"
+      }
+    },
+    {
+      "kind": "assert",
+      "assert": {
+        "id": "X2.no_duplicates",
+        "group": "stretch",
+        "points": 0,
+        "level": "info",
+        "kind": "counter",
+        "args": {
+          "name": "erp.duplicate_document_attempts",
+          "equals": 0
+        },
+        "title": "no document was posted twice under two different keys"
+      }
+    },
+    {
+      "kind": "assert",
+      "assert": {
+        "id": "X2.closure",
+        "group": "stretch",
+        "points": 0,
+        "level": "info",
+        "kind": "receipt_closure",
+        "title": "every batch carries a complete, closing receipt"
+      }
+    },
+    {
+      "kind": "assert",
+      "assert": {
+        "id": "X2.rss",
+        "group": "stretch",
+        "points": 0,
+        "level": "info",
+        "kind": "peak_rss_max",
+        "args": {
+          "max_kb": 524288
+        },
+        "title": "peak resident set stays under 512 MiB",
+        "why": "the number a reviewer wants from this scenario. Holding 44'400 invoice lines and 79'200 order lines in memory to get through it is a design choice, and this is where it becomes visible. It is a note: a JVM or .NET baseline must never cost a candidate a point"
+      }
+    },
+    {
+      "kind": "assert",
+      "assert": {
+        "id": "X2.runtime",
+        "group": "stretch",
+        "points": 0,
+        "level": "info",
+        "kind": "runtime_wall_ms_max",
+        "title": "wall-clock runtime, reported and never scored",
+        "why": "printed so a reviewer can see the shape of the run. The virtual clock is what the services charge; real time is only ever a note"
+      }
+    }
+  ]
+}

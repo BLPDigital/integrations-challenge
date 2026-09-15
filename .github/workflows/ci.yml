@@ -1,0 +1,73 @@
+# The checks a candidate's own repository runs. Nothing here names a hidden fixture, a
+# hidden scenario or an internal gate: those live in a workflow the candidate
+# bundle strips.
+name: ci
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: false
+      - name: gofmt
+        run: |
+          out=$(gofmt -l .)
+          if [ -n "$out" ]; then echo "not gofmt clean:"; echo "$out"; exit 1; fi
+      - name: go vet
+        run: go vet ./...
+      - name: tests
+        run: go test -race -count=2 ./...
+      - name: standard library only
+        run: |
+          # This module has no dependencies, by design: everything builds offline.
+          go list -deps ./... | grep -E '^[^/]+\.[^/]+/' | grep -v '^github.com/fatjonblp/' | sort -u > nonstd.txt || true
+          if [ -s nonstd.txt ]; then echo "non-standard-library dependencies:"; cat nonstd.txt; exit 1; fi
+          if [ -f go.sum ]; then echo "go.sum exists; this module has no dependencies"; exit 1; fi
+      - name: no wall clock outside the virtual clock
+        run: tools/no-wallclock.sh
+      - name: protected tree
+        run: tools/verify-pristine.sh
+      - name: offline build
+        run: GOPROXY=off go build ./...
+
+  public-scenarios:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: false
+      # The scenarios grade YOUR connector, so until connector/run.sh is yours
+      # there is nothing to grade. A red X on an untouched checkout tells you
+      # nothing you did not already know, and it hides the first real failure
+      # when it comes. The stub reports itself in --version, which is part of the
+      # CLI contract, so this needs no marker file and no honour system.
+      - name: is there a connector yet
+        id: connector
+        run: |
+          if connector/run.sh --version 2>&1 | grep -q blp-connector-stub; then
+            echo "written=false" >> "$GITHUB_OUTPUT"
+            echo "connector/run.sh is still the stub this exercise ships with, so the"
+            echo "scenarios are skipped. Replace it with your connector and this job"
+            echo "starts running S0, S1 and S2 against it on every push."
+          else
+            echo "written=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: build
+        if: steps.connector.outputs.written == 'true'
+        run: make build
+      - name: the smoke gate
+        if: steps.connector.outputs.written == 'true'
+        run: ./bin/grade run --scenario S0
+      - name: every public scenario
+        if: steps.connector.outputs.written == 'true'
+        run: ./bin/grade selfcheck

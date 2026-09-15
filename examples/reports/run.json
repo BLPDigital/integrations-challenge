@@ -1,0 +1,40 @@
+{
+  "run_id": "run_s0_040602ef",
+  "connector_version": "1.0.0",
+  "exit_code": 2,
+  "channel_used": "file",
+  "formats_used": [
+    "csv",
+    "kredexp-2.1"
+  ],
+  "erp_requests": 11,
+  "erp_429s": 0,
+  "erp_5xx_retried": 0,
+  "twin_requests": 4,
+  "twin_429s": 0,
+  "soap_calls": 3,
+  "batches_written": 1,
+  "records_read": 1117,
+  "records_ingested": 1117,
+  "records_rejected": 0,
+  "records_skipped_unchanged": 0,
+  "proposals_read": 87,
+  "proposals_posted": 86,
+  "proposals_rejected": 1,
+  "proposals_pending": 0,
+  "duplicate_document_attempts": 0,
+  "watermark_before": {
+    "purchase_order": "0",
+    "purchase_order_line": "0",
+    "supplier": "0"
+  },
+  "watermark_after": {
+    "purchase_order": "100919",
+    "purchase_order_line": "100920",
+    "supplier": "100918"
+  },
+  "full_load": false,
+  "fx_snapshot_token": "snap-82c55dc07f77ce5c",
+  "fx_correlation_id": "run_s0_040602ef",
+  "fx_truncated": false
+}

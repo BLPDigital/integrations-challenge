@@ -1,0 +1,150 @@
+{
+  "id": "X1",
+  "visibility": "stretch",
+  "title": "crash and resume: SIGKILL once the ERP holds a document",
+  "purpose": "The connector is killed with SIGKILL after the ERP has accepted at least one document, and then invoked again with THE SAME run id, because a resume is the same run continuing. Everything this scenario asserts is a convergence property: the state the twin ends with, one document per invoice, nothing left pending, and zero duplicate document attempts. What it deliberately does NOT assert is how much work the resume redid. A real SIGKILL lands between the ERP creating a document and the connector recording that it did, and which of those two won is not something a scenario can pin, so a scenario that scored it would be scoring a coin toss. The idempotency key is what makes the redone work harmless: derived from the proposal, a re-post is a replay and the ERP answers it with the original document number, which is why duplicate_document_attempts is zero even here. Worth zero points, recorded as a tie-break note.",
+  "seed_scenario": "S1",
+  "seed": 20261001,
+  "erp_quota": 1350,
+  "twin_quota": 500,
+  "chaos": true,
+  "reference_importer": true,
+  "golden": {
+    "state_digest": "003480333972fc0c52e52179a9d6d079a8c1b491a8c3abfd7fd1457337eb8aac",
+    "digest_pinned_by": "not pinned from this scenario's own run, which is the point: it is the digest a CLEAN run of the same data reaches. grade run --scenario S1 --seed 20261001 with chaos off produces 003480333972 and the crash-and-resume run produces the same value, so the pin encodes the convergence claim (a crash changes the path and never the answer) instead of recording whatever the crashed run happened to leave behind. It confirms the chaos-neutrality claim in passing: X1 runs with fault injection on and the clean reference run has it off. Reviewed 2026-09-01, 4'300 documents, 4'300 distinct references, 400 replays on the resume, 0 duplicate attempts."
+  },
+  "steps": [
+    {
+      "kind": "reset"
+    },
+    {
+      "kind": "seed"
+    },
+    {
+      "kind": "run_connector",
+      "phase": "a",
+      "timeout_s": 900,
+      "note": "this invocation will not finish: the harness kills it once the ERP holds a document"
+    },
+    {
+      "kind": "kill_connector",
+      "signal": "SIGKILL",
+      "after": "first_erp_post",
+      "note": "SIGKILL, not SIGTERM: a crash gets no chance to flush anything. The trigger is the ERP's own documents_created counter, so the kill lands at the same logical point on a fast and on a slow machine"
+    },
+    {
+      "kind": "scan",
+      "note": "whatever phase a published before it died has to be applied before the resume runs"
+    },
+    {
+      "kind": "run_connector",
+      "phase": "b",
+      "timeout_s": 900,
+      "note": "the resume: the same run id, the same state directory, the same delivery still in the drop"
+    },
+    {
+      "kind": "scan"
+    },
+    {
+      "kind": "assert",
+      "assert": {
+        "id": "X1.exit",
+        "group": "stretch",
+        "points": 0,
+        "level": "info",
+        "kind": "exit_code_in",
+        "title": "the resume exits 0 or 2",
+        "why": "the killed invocation has no exit code worth reading, so this covers the resume alone: by the time it runs there is nothing left that cannot succeed"
+      }
+    },
+    {
+      "kind": "assert",
+      "assert": {
+        "id": "X1.digest",
+        "group": "stretch",
+        "points": 0,
+        "level": "info",
+        "kind": "state_digest",
+        "title": "the state after the crash and the resume is the state a clean run reaches",
+        "why": "a crash is allowed to change the path and never the answer. The digest is blind to batching and to arrival order, which is what makes it pinnable across a crash at all"
+      }
+    },
+    {
+      "kind": "assert",
+      "assert": {
+        "id": "X1.no_repost",
+        "group": "stretch",
+        "points": 0,
+        "level": "info",
+        "kind": "no_repost_on_resume",
+        "title": "one document per invoice, whatever the crash interrupted",
+        "why": "the replay count is deliberately unbounded here: a resume after a real crash re-posts what it cannot prove it booked, and that is correct. What must hold is that re-posting created nothing"
+      }
+    },
+    {
+      "kind": "assert",
+      "assert": {
+        "id": "X1.no_duplicates",
+        "group": "stretch",
+        "points": 0,
+        "level": "info",
+        "kind": "counter",
+        "args": {
+          "name": "erp.duplicate_document_attempts",
+          "equals": 0
+        },
+        "title": "no document was posted twice under two different keys",
+        "why": "the crash is the case the key exists for. A key derived from the proposal makes the resume's re-post a replay, and the ERP answers it with the original document number. A key with the run id folded in is correct here and wrong on the night after a run that never finished, which is a different scenario and a different lesson."
+      }
+    },
+    {
+      "kind": "assert",
+      "assert": {
+        "id": "X1.pending",
+        "group": "stretch",
+        "points": 0,
+        "level": "info",
+        "kind": "proposal_status_count",
+        "args": {
+          "pending_zero": true
+        },
+        "title": "the resume left nothing pending",
+        "why": "a resume that converges finishes the work the crash interrupted"
+      }
+    },
+    {
+      "kind": "assert",
+      "assert": {
+        "id": "X1.documents",
+        "group": "stretch",
+        "points": 0,
+        "level": "info",
+        "kind": "erp_document_set",
+        "title": "the ERP holds exactly one document per invoice the data says should post"
+      }
+    },
+    {
+      "kind": "assert",
+      "assert": {
+        "id": "X1.closure",
+        "group": "stretch",
+        "points": 0,
+        "level": "info",
+        "kind": "receipt_closure",
+        "title": "every batch the twin accepted carries a complete, closing receipt"
+      }
+    },
+    {
+      "kind": "assert",
+      "assert": {
+        "id": "X1.budget",
+        "group": "stretch",
+        "points": 0,
+        "level": "info",
+        "kind": "request_budget",
+        "title": "both invocations together stay inside the published quota",
+        "why": "1'350 against S1's 1'200 is the slack a resume is allowed: re-pulling what the crash lost is legitimate, re-pulling everything twice is not"
+      }
+    }
+  ]
+}

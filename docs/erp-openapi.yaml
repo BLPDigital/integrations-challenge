@@ -1,0 +1,658 @@
+openapi: 3.0.3
+info:
+  title: Steinbach Group ERP integration facade
+  version: "1.0.0"
+  description: |
+    The machine-readable contract of the ERP's REST surface. The prose companion is
+    `docs/erp-api.md`; real captured transcripts are in `docs/transcripts.md`; the one SOAP
+    operation is documented in `docs/soap.md` and is deliberately not described here, because it
+    is not a REST resource.
+
+    Conventions that hold everywhere on this surface:
+
+    - Money is a plain decimal STRING (`"1234.56"`). A JSON number in an amount field is a 400.
+    - Dates are `YYYY-MM-DD`.
+    - Natural keys are strings and their leading zeros are significant. `supplier.legacy_id` is
+      the one real JSON number on this surface and must never be used as a key.
+    - There is no wall clock. Token lifetimes and rate limits are counted in requests and in
+      virtual milliseconds, which advance only when a request declares a cost.
+    - `retriable` in an error body is authoritative. Two different 503s exist and only one of
+      them may be retried.
+
+    The `/erp-admin/v1` surface is intentionally absent from this file. It belongs to the
+    grading harness, not to the connector, and the connector is never issued its token.
+servers:
+  - url: http://127.0.0.1:8082
+    description: |
+      The local default, used by `make up`. In grading the address is allocated at run time and
+      passed to the connector as `--erp-base-url`; both services accept `--listen 127.0.0.1:0`
+      and print the address they bound as one JSON line on stdout. Never hard-code a port.
+
+tags:
+  - name: auth
+  - name: master data
+  - name: postings
+
+security:
+  - bearerAuth: []
+
+paths:
+  /healthz:
+    get:
+      tags: [auth]
+      summary: Liveness probe. Free of charge, counts nothing, needs no token.
+      security: []
+      responses:
+        "200":
+          description: The service is up and reports which scenario and seed it serves.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: ok }
+                  svc: { type: string, example: erp }
+                  scenario: { type: string, example: S1 }
+                  seed: { type: integer, format: int64, example: 20260416 }
+
+  /erp/v1/auth/token:
+    post:
+      tags: [auth]
+      summary: Client credentials grant.
+      description: |
+        Virtual cost 10 vms, one quota unit. Credentials come from the environment variables
+        `ERP_CLIENT_ID` and `ERP_CLIENT_SECRET`. A form-encoded body with the same two fields is
+        accepted as well, because half the HTTP clients in the world post credentials that way.
+
+        There is no `expires_in`: the token dies after `expires_after_requests` authenticated
+        requests or `expires_after_virtual_ms` virtual milliseconds, whichever comes first, and
+        both counters are properties of the virtual clock rather than of real time.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [client_id, client_secret]
+              properties:
+                client_id: { type: string, example: blp-connector }
+                client_secret: { type: string }
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [client_id, client_secret]
+              properties:
+                client_id: { type: string }
+                client_secret: { type: string }
+      responses:
+        "200":
+          description: A token.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [access_token, expires_after_requests, expires_after_virtual_ms]
+                properties:
+                  access_token: { type: string, example: tok_236b1fcebf58d2d2f83801c4a9f5d304565e6714 }
+                  expires_after_requests: { type: integer, example: 250 }
+                  expires_after_virtual_ms: { type: integer, format: int64, example: 900000 }
+        "401":
+          description: "`TOKEN_INVALID`, retriable false. Repeating the same wrong secret cannot help."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /erp/v1/suppliers:
+    get:
+      tags: [master data]
+      summary: Paginated creditor master.
+      description: Virtual cost 40 vms + 0.5 vms per record returned, one quota unit.
+      parameters:
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/cursor"
+        - $ref: "#/components/parameters/changedSince"
+      responses:
+        "200":
+          description: |
+            One page. `X-Limit-Clamped` is present only when the requested limit exceeded 250.
+          headers:
+            X-Limit-Clamped:
+              description: The effective page size when the requested limit was clamped. Not an error.
+              schema: { type: integer, example: 250 }
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ListEnvelope"
+                  - type: object
+                    properties:
+                      records:
+                        type: array
+                        items: { $ref: "#/components/schemas/Supplier" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /erp/v1/suppliers/{supplier_number}:
+    get:
+      tags: [master data]
+      summary: One creditor by its number.
+      description: |
+        Virtual cost 25 vms, one quota unit. This route is **net token negative on purpose**: it
+        earns 0.5 tokens of refill and costs one whole token, so pulling a creditor master one
+        record at a time exhausts the bucket. It exists for the correction path, where you
+        already know the one key you need.
+      parameters:
+        - name: supplier_number
+          in: path
+          required: true
+          description: Exact string match. Leading zeros are significant, so `0000417` and `0000000417` are two different creditors.
+          schema: { type: string, example: "0000417" }
+      responses:
+        "200":
+          description: The creditor.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Supplier" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404":
+          description: "`SUPPLIER_NOT_FOUND`, retriable false."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /erp/v1/purchase-orders:
+    get:
+      tags: [master data]
+      summary: Paginated purchase order headers, plus the bulk id form.
+      description: |
+        Virtual cost 40 vms + 0.5 vms per record returned, one quota unit.
+
+        ### The bulk `ids=` form
+
+        This is the one route form documented only in this file, and that is deliberate: reading
+        the whole specification is part of the job. Passing `ids=` restricts the collection to the
+        orders named, and the ordinary paging contract still applies to the restricted set, so the
+        envelope, the cursor and `changed_since` behave exactly as they do without it.
+
+        **It is an optimization and never a requirement.** Every published scenario stays inside
+        its published request budget with plain pagination alone. The bulk form only ever helps a
+        client that already knows which orders it wants, typically when resolving the purchase
+        orders referenced by one legacy delivery instead of walking the whole order master. Not
+        using it costs no points, and nothing in the grading depends on it. It is written down
+        here rather than hidden so that it cannot be a gotcha: if you find it, it is a small
+        efficiency win; if you do not, you are still in budget.
+
+        Ids are canonicalized before matching with exactly the published purchase order rule
+        (trim, drop a leading `PO-`, then compare exactly), duplicates are dropped, and the set is
+        sorted, so `ids=PO-4500001234,4500001234` and `ids=4500001234` are the same request. Ids
+        that match nothing are silently absent from the result rather than an error, because a
+        bulk read of five orders where one was deleted is still a useful answer.
+      parameters:
+        - name: ids
+          in: query
+          required: false
+          description: |
+            Comma-separated purchase order numbers. Canonicalized, deduplicated and sorted before
+            use. Omit for the whole collection.
+          schema: { type: string }
+          example: "PO-004417,4500001234,004418"
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/cursor"
+        - $ref: "#/components/parameters/changedSince"
+      responses:
+        "200":
+          description: One page.
+          headers:
+            X-Limit-Clamped:
+              schema: { type: integer, example: 250 }
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ListEnvelope"
+                  - type: object
+                    properties:
+                      records:
+                        type: array
+                        items: { $ref: "#/components/schemas/PurchaseOrder" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /erp/v1/purchase-order-lines:
+    get:
+      tags: [master data]
+      summary: Paginated purchase order lines.
+      description: |
+        Virtual cost 40 vms + 0.5 vms per record returned, one quota unit. The natural key is
+        `(po_number, line_no)` and `line_no` keeps its leading zeros. `unit_price` carries four
+        fraction digits and `quantity` three. See "Known inconsistencies" in `docs/twin-api.md`
+        before relaying these records into the twin.
+      parameters:
+        - $ref: "#/components/parameters/limit"
+        - $ref: "#/components/parameters/cursor"
+        - $ref: "#/components/parameters/changedSince"
+      responses:
+        "200":
+          description: One page.
+          headers:
+            X-Limit-Clamped:
+              schema: { type: integer, example: 250 }
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ListEnvelope"
+                  - type: object
+                    properties:
+                      records:
+                        type: array
+                        items: { $ref: "#/components/schemas/PurchaseOrderLine" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /erp/v1/uom-conversions:
+    get:
+      tags: [master data]
+      summary: The unit-of-measure conversion table, whole, in one page.
+      description: |
+        The table is small, carries no change sequence and is not incremental, so
+        `max_change_seq` is 0, `next_cursor` is empty and `has_more` is always false. The envelope
+        is the ordinary list envelope anyway so you can reuse your list parser. The twin is
+        pre-seeded with the same table by `POST /admin/v1/seed`, so pulling this route is
+        informational rather than required.
+      responses:
+        "200":
+          description: The whole table.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ListEnvelope"
+                  - type: object
+                    properties:
+                      records:
+                        type: array
+                        items: { $ref: "#/components/schemas/UoMConversion" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /erp/v1/ap/documents:
+    post:
+      tags: [postings]
+      summary: Post one AP document.
+      description: |
+        Virtual cost 60 vms, one quota unit. `Idempotency-Key` is mandatory. A business rejection
+        arrives inside a 200 with `status:"rejected"` and `retriable:false`; it is not a transport
+        error and retrying it is a graded mistake.
+      parameters:
+        - $ref: "#/components/parameters/idempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PostingItem" }
+      responses:
+        "200":
+          description: The per-item result, posted or rejected.
+          headers:
+            Idempotent-Replay:
+              description: Present and `true` when this response is the stored answer to a repeated key.
+              schema: { type: string, example: "true" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PostingResult" }
+        "400":
+          description: "`MALFORMED_BODY` or `IDEMPOTENCY_KEY_REQUIRED`, retriable false."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "409":
+          description: "`IDEMPOTENCY_KEY_REUSED`: the same key with a different body."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /erp/v1/ap/documents:batch:
+    post:
+      tags: [postings]
+      summary: Post up to 200 AP documents.
+      description: |
+        Virtual cost 60 vms + 8 vms per item, one quota unit. This is the efficient path: 200
+        documents in one request cost one token and advance 1'660 vms, which earns 33 tokens back.
+
+        `{"items":[...]}` is the documented body; a bare JSON array is accepted as a convenience.
+        More than 200 items is `400` with `details.reason = too_many_items`. Items are booked in
+        request order under one lock, so document numbers are assigned deterministically.
+      parameters:
+        - $ref: "#/components/parameters/idempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  required: [items]
+                  properties:
+                    items:
+                      type: array
+                      minItems: 1
+                      maxItems: 200
+                      items: { $ref: "#/components/schemas/PostingItem" }
+                - type: array
+                  minItems: 1
+                  maxItems: 200
+                  items: { $ref: "#/components/schemas/PostingItem" }
+      responses:
+        "200":
+          description: |
+            Every item reached the same outcome: all posted, or all rejected.
+          headers:
+            Idempotent-Replay:
+              schema: { type: string, example: "true" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BatchResponse" }
+        "207":
+          description: |
+            Mixed outcomes. `results` keeps the request's item order and is the authority; the
+            counts are a convenience. A client that treats 207 as a failure loses the documents it
+            actually created, and a client that treats it as a blanket success posts nothing for
+            the rejected half.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BatchResponse" }
+        "400":
+          description: "`MALFORMED_BODY` or `IDEMPOTENCY_KEY_REQUIRED`."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "409":
+          description: "`IDEMPOTENCY_KEY_REUSED`."
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: The `access_token` from `POST /erp/v1/auth/token`.
+
+  parameters:
+    limit:
+      name: limit
+      in: query
+      required: false
+      description: |
+        Page size. Default 100, maximum 250. A larger value is clamped SILENTLY, which is what a
+        real ERP does, and the response then carries `X-Limit-Clamped: 250`. A value below 1 or a
+        non-numeric value is a 400.
+      schema: { type: integer, minimum: 1, default: 100 }
+    cursor:
+      name: cursor
+      in: query
+      required: false
+      description: |
+        The `next_cursor` of the previous page, passed back verbatim. Opaque, signed and
+        tamper-evident: a hand-edited cursor, or one issued for another dataset, is
+        `400 INVALID_CURSOR`. Combines with `changed_since`: the page starts at the later of the
+        two positions, so a resumed delta pull loses nothing.
+      schema: { type: string }
+    changedSince:
+      name: changed_since
+      in: query
+      required: false
+      description: |
+        Keeps records whose `change_seq` is STRICTLY GREATER than this value. 0 returns
+        everything, which is a cold load. Pass your persisted watermark here.
+      schema: { type: integer, format: int64, minimum: 0, default: 0 }
+    idempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: |
+        Mandatory on every posting. It must be a pure function of what is being posted and stable
+        across runs; do not fold the run id or a fresh UUID into it.
+      schema: { type: string }
+      example: "blp:acme-ch:prp_0000001:85b70b63e1061536"
+
+  responses:
+    BadRequest:
+      description: "`MALFORMED_BODY` or `INVALID_CURSOR`, retriable false."
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Unauthorized:
+      description: |
+        `TOKEN_MISSING` or `TOKEN_INVALID` (retriable false), or `TOKEN_EXPIRED` (retriable true:
+        refresh and repeat). A 401 still costs a quota unit.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    UnsupportedMediaType:
+      description: "`UNSUPPORTED_CONTENT_TYPE`. The posting endpoints take application/json only."
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    RateLimited:
+      description: |
+        `RATE_LIMITED`, retriable true. Either the token bucket is empty or the content-addressed
+        injector fired on this logical request's first delivery. `retry_after_hint_ms` is 50, the
+        exact refill interval. Real seconds refill nothing: the bucket refills from the virtual
+        clock, so the way out is a request that earns more than it costs.
+      headers:
+        Retry-After:
+          schema: { type: integer, example: 1 }
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Unavailable:
+      description: |
+        Two different 503s live here and only `retriable` tells them apart.
+        `SERVICE_UNAVAILABLE` is the injected fault: retriable true, and the retry of the same
+        logical request always succeeds. `QUOTA_EXHAUSTED` is the hard per-run request quota:
+        retriable false, permanent for the rest of the run, and retrying it is a graded mistake.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+
+  schemas:
+    Error:
+      type: object
+      required: [code, message, retriable]
+      properties:
+        code: { type: string, example: RATE_LIMITED }
+        message: { type: string, description: Human text. It never carries a value you were supposed to compute. }
+        retriable:
+          type: boolean
+          description: Machine-readable and authoritative. Prefer it over the status code.
+        retry_after_hint_ms:
+          type: integer
+          description: Present on 429 only. The exact refill interval in virtual milliseconds.
+          example: 50
+        details:
+          type: object
+          additionalProperties: true
+          description: "Named context, for example `{reason, field, item_key}` on a 400."
+
+    ListEnvelope:
+      type: object
+      required: [records, next_cursor, max_change_seq, returned, has_more]
+      properties:
+        records:
+          type: array
+          items: { type: object }
+          description: Never null.
+        next_cursor:
+          type: string
+          description: Empty exactly when `has_more` is false.
+        max_change_seq:
+          type: integer
+          format: int64
+          description: |
+            The highest `change_seq` in the WHOLE collection, not in this page. It is therefore a
+            valid watermark only once `has_more` is false; persisting it earlier skips everything
+            not yet read.
+          example: 146329
+        returned: { type: integer, example: 250 }
+        has_more: { type: boolean }
+
+    Supplier:
+      type: object
+      properties:
+        supplier_number:
+          type: string
+          description: Natural key. Exact string equality; leading zeros significant.
+          example: "0000417"
+        name: { type: string, example: "Widmer Hydraulik AG" }
+        country: { type: string, example: LI }
+        currency: { type: string, example: CHF }
+        iban:
+          type: string
+          description: Payment data. Must never reach a log, a report or stdout unmasked.
+          example: CH3400762000003302223
+        vat_number: { type: string, example: "CHE-961.843.398 MWST" }
+        payment_terms_days: { type: integer, example: 30 }
+        blocked: { type: boolean }
+        change_seq: { type: integer, format: int64, example: 111979 }
+        legacy_id:
+          type: integer
+          description: A real JSON number, and a convenience field only. Never use it as a key.
+          example: 417
+
+    PurchaseOrder:
+      type: object
+      properties:
+        po_number:
+          type: string
+          description: |
+            May arrive space-padded or with a leading `PO-`. Trim, drop a leading `PO-`, then
+            compare exactly. Leading zeros inside the number stay significant.
+          example: " 4500002042 "
+        supplier_number: { type: string, example: "0000003474" }
+        company_code: { type: string, enum: [CH10, CH20] }
+        currency: { type: string, example: CHF }
+        status: { type: string, enum: [OPEN, CLOSED, CANCELLED] }
+        order_date: { type: string, example: "2026-02-15" }
+        cost_center: { type: string, example: CC-3283 }
+        change_seq: { type: integer, format: int64 }
+
+    PurchaseOrderLine:
+      type: object
+      properties:
+        po_number: { type: string, example: " 4500002042 " }
+        line_no: { type: string, description: Natural key part. Leading zeros significant., example: "00010" }
+        material: { type: string, example: MAT-100294 }
+        description: { type: string }
+        quantity: { type: string, description: "Decimal string, three fraction digits.", example: "5.000" }
+        uom: { type: string, example: STK }
+        unit_price: { type: string, description: "Decimal string, four fraction digits.", example: "7.1128" }
+        currency: { type: string, example: CHF }
+        gl_account: { type: string, example: "0006460" }
+        cost_center: { type: string, example: CC-3283 }
+        change_seq: { type: integer, format: int64 }
+
+    UoMConversion:
+      type: object
+      description: base_quantity = alt_quantity * numerator / denominator, exact at three decimals.
+      properties:
+        material: { type: string, description: Empty is the generic rule for this alternative unit. }
+        alt_uom: { type: string, example: CTN }
+        numerator: { type: integer, example: 12 }
+        denominator: { type: integer, example: 1 }
+        base_uom: { type: string, example: EA }
+
+    PostingItem:
+      type: object
+      required:
+        [external_reference, company_code, supplier_number, supplier_invoice_number,
+         document_type, document_date, currency, gross_amount]
+      properties:
+        item_key: { type: string, description: "Your handle, echoed on the result. Defaults to external_reference." }
+        external_reference:
+          type: string
+          description: |
+            Your stable identity of the business document. The ERP indexes duplicates by
+            `(tenant, external_reference)`, so THIS field, not the idempotency key, is what
+            protects a customer's ledger.
+          example: prp_0000001
+        company_code: { type: string, enum: [CH10, CH20] }
+        supplier_number: { type: string, description: "One to ten digits. Identity is existence in the master, never shape." }
+        supplier_invoice_number: { type: string, example: "0004711" }
+        document_type: { type: string, enum: [RE, GU] }
+        document_date: { type: string, example: "2026-03-29" }
+        posting_date: { type: string, description: Defaults to document_date. }
+        po_number: { type: string, description: Empty when the delivery carries none. }
+        cost_center: { type: string, description: Empty is ACCEPTED. Surfacing the gap is correct; inventing a value is not. }
+        currency: { type: string, example: CHF }
+        gross_amount: { type: string, description: Decimal STRING. A JSON number is a 400., example: "1252.78" }
+        vat_amount: { type: string, example: "0.00" }
+        source_currency: { type: string, example: EUR }
+        source_gross_amount: { type: string, example: "1345.63" }
+        fx_rate: { type: string, example: "0.931000" }
+        fx_rate_factor:
+          type: integer
+          description: |
+            The `RateFactorFrom` of the row you used. Stored, never recomputed: an ERP that
+            recomputed your conversion would be handing out the answer.
+          example: 1
+
+    PostingResult:
+      type: object
+      required: [item_key, status, idempotency_replay]
+      properties:
+        item_key: { type: string }
+        status: { type: string, enum: [posted, rejected] }
+        document_number: { type: string, example: AP-2026-0000001 }
+        fiscal_year: { type: integer, example: 2026 }
+        posting_date: { type: string, example: "2026-03-29" }
+        erp_revision: { type: integer, example: 1 }
+        idempotency_replay:
+          type: boolean
+          description: True when this whole response is the stored answer to a repeated key.
+        duplicate:
+          type: boolean
+          description: |
+            True when this external reference already had a document and the item was answered
+            with THAT document's number. No second document was created and
+            `duplicate_document_attempts` was incremented. Grading asserts that counter is 0.
+        code:
+          type: string
+          description: The business rejection code.
+          enum:
+            - ERP_SUPPLIER_UNKNOWN
+            - ERP_SUPPLIER_BLOCKED
+            - ERP_PO_NOT_FOUND
+            - ERP_PO_CLOSED
+            - ERP_PERIOD_CLOSED
+            - ERP_COST_CENTER_UNKNOWN
+            - ERP_AMOUNT_MISMATCH
+        message: { type: string }
+        retriable:
+          type: boolean
+          description: Present and false on every rejection, absent on a success.
+
+    BatchResponse:
+      type: object
+      required: [results, posted, rejected, duplicates]
+      properties:
+        results:
+          type: array
+          items: { $ref: "#/components/schemas/PostingResult" }
+          description: In request order. The authority.
+        posted: { type: integer }
+        rejected: { type: integer }
+        duplicates: { type: integer }

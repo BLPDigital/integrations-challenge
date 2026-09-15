@@ -1,0 +1,81 @@
+{{define "banner"}}
+{{if .}}<div class="banner {{.Class}}">
+  <p class="btitle">{{.Title}}</p>
+  {{range .Lines}}<p>{{.}}</p>{{end}}
+</div>{{end}}
+{{end}}
+
+{{define "sections"}}
+{{if .}}<div class="sections">
+  {{range .}}<section>
+    <h2>{{.Title}}</h2>
+    <dl>{{range .Items}}<dt>{{.Label}}</dt><dd{{if .Class}} class="{{.Class}}"{{end}}>{{.Value}}</dd>{{end}}</dl>
+  </section>{{end}}
+</div>{{end}}
+{{end}}
+
+{{define "search"}}
+{{if .}}<form class="search" method="get" action="{{.Action}}">
+  <label for="q">search</label>
+  <input id="q" type="text" name="q" value="{{.Q}}" placeholder="{{.Placeholder}}" size="40">
+  <button type="submit">search</button>
+  {{if .Q}}<a href="{{.Action}}">clear</a>{{end}}
+</form>{{end}}
+{{end}}
+
+{{define "filter"}}
+{{if .}}<form class="search" method="get" action="{{.Action}}">
+  <label for="endpoint">endpoint</label>
+  <select id="endpoint" name="endpoint">
+    {{range .Endpoints}}<option value="{{.Value}}"{{if .Selected}} selected{{end}}>{{.Label}}</option>{{end}}
+  </select>
+  <label for="class">status</label>
+  <select id="class" name="class">
+    {{range .Classes}}<option value="{{.Value}}"{{if .Selected}} selected{{end}}>{{.Label}}</option>{{end}}
+  </select>
+  <button type="submit">filter</button>
+  <a href="{{.Action}}">clear</a>
+</form>{{end}}
+{{end}}
+
+{{define "summary"}}
+{{if .}}<div class="summary">
+  <div class="totals">
+    <span class="kv">requests <b>{{.Requests}}</b></span>
+    <span class="kv">429s <b>{{.RateLimited}}</b></span>
+    <span class="kv">injected 5xx <b>{{.Injected}}</b></span>
+    <span class="kv">single GETs <b>{{.SingleGets}}</b></span>
+    <span class="kv">list pages <b>{{.ListPages}}</b></span>
+    <span class="kv ratio">{{.Ratio}}</span>
+  </div>
+  <table class="mini">
+    <thead><tr><th>endpoint</th><th class="num">requests</th></tr></thead>
+    <tbody>{{range .Endpoints}}<tr><td>{{.Label}}</td><td class="num">{{.Value}}</td></tr>{{end}}</tbody>
+  </table>
+  <p class="note">{{.Note}}</p>
+</div>{{end}}
+{{end}}
+
+{{define "table"}}
+{{if .}}<div class="tablebox">
+  <table>
+    <thead><tr>{{range .Columns}}<th{{if .Class}} class="{{.Class}}"{{end}}>{{.Title}}</th>{{end}}</tr></thead>
+    <tbody>
+      {{if .Rows}}{{range .Rows}}<tr{{if .Flagged}} class="flagged"{{end}}>{{range .Cells}}<td{{if .Class}} class="{{.Class}}"{{end}}>{{.Text}}</td>{{end}}</tr>{{end}}
+      {{else}}<tr><td class="empty" colspan="{{len .Columns}}">{{.Empty}}</td></tr>{{end}}
+    </tbody>
+  </table>
+</div>
+{{if .Note}}<p class="note">{{.Note}}</p>{{end}}{{end}}
+{{end}}
+
+{{define "pager"}}
+<p class="pager">
+  {{if .Shown}}rows {{.From}} to {{.To}} of {{.Total}}{{else if .Total}}no rows on this page, {{.Total}} in total{{else}}no rows{{end}}
+  <span class="sep">|</span> page {{.Page}} of {{.Pages}}
+  <span class="sep">|</span>
+  {{if .FirstHref}}<a href="{{.FirstHref}}">first</a>{{else}}<span class="off">first</span>{{end}}
+  {{if .PrevHref}}<a href="{{.PrevHref}}">previous</a>{{else}}<span class="off">previous</span>{{end}}
+  {{if .NextHref}}<a href="{{.NextHref}}">next</a>{{else}}<span class="off">next</span>{{end}}
+</p>
+{{end}}

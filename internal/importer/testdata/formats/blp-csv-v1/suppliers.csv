@@ -1,0 +1,3 @@
+supplier_number,name,country,currency,payment_terms_days,blocked,change_seq
+0000417,Steinbach Industrie AG,CH,CHF,30,false,118422
+0000418,Nordmuster GmbH,DE,EUR,60,true,118423

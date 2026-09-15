@@ -1,0 +1,58 @@
+{
+  "manifest_version": "1",
+  "batch_id": "example-batch-0001",
+  "producer": "examples/batch",
+  "run_id": "run_example",
+  "tenant": "acme-ch",
+  "source_system": "erp-prod",
+  "mode": "upsert",
+  "full_load": false,
+  "watermark": {
+    "supplier": "100419"
+  },
+  "on_error": "continue",
+  "files": [
+    {
+      "path": "suppliers.csv",
+      "dataset": "supplier",
+      "format": "csv",
+      "profile": "blp-canonical-v1",
+      "encoding": "UTF-8",
+      "record_count": 3,
+      "sha256": "af3f332b8eeae4a0fa32531cd2741238505646a6b19aeddf960e0e2c624b2a9a",
+      "csv": {
+        "delimiter": ",",
+        "quote": "\"",
+        "escape": "double",
+        "header": true,
+        "line_ending": "CRLF",
+        "decimal_separator": ".",
+        "thousands_separator": "",
+        "date_format": "RFC3339",
+        "null_token": "",
+        "trim": "both"
+      }
+    },
+    {
+      "path": "cost_centers.csv",
+      "dataset": "cost_center",
+      "format": "csv",
+      "profile": "blp-canonical-v1",
+      "encoding": "UTF-8",
+      "record_count": 2,
+      "sha256": "77f271b5db21cb29607b40d17c858ccc96ff54ce6d0b70dc55af3392b689b33d",
+      "csv": {
+        "delimiter": ",",
+        "quote": "\"",
+        "escape": "double",
+        "header": true,
+        "line_ending": "CRLF",
+        "decimal_separator": ".",
+        "thousands_separator": "",
+        "date_format": "RFC3339",
+        "null_token": "",
+        "trim": "both"
+      }
+    }
+  ]
+}

@@ -1,0 +1,191 @@
+{
+  "id": "S0",
+  "visibility": "public",
+  "title": "smoke gate: is the plumbing alive",
+  "purpose": "Zero points. Its only job is to tell you your plumbing works before you invest in semantics: a tiny dataset, no chaos, and every assertion here is one you can fix in minutes. If S0 is green and S1 is not, the problem is semantics, not wiring.",
+  "seed_scenario": "S0",
+  "seed": 20260416,
+  "erp_quota": 200,
+  "twin_quota": 120,
+  "chaos": false,
+  "reference_importer": true,
+  "golden": {
+    "state_digest": "7e93b7b958817768086cfb5bd1ad1aa6e3b1b8cebca56f92908eab774a582e40",
+    "digest_pinned_by": "reference run reviewed 2026-09-01: 87 proposals, 86 posted, 1 business rejection, 15 exceptions, 3 SOAP calls, every planted trap firing exactly once. Re-pinned after the outbound ack journal was removed from the digest walk; the earlier pin hashed the run id and could not be reproduced."
+  },
+  "steps": [
+    {
+      "kind": "reset",
+      "note": "a clean run on both services before anything is seeded"
+    },
+    {
+      "kind": "seed",
+      "note": "the ERP dataset plus the twin's pre-seeded cost centers and unit conversions"
+    },
+    {
+      "kind": "run_connector",
+      "phase": "a",
+      "timeout_s": 300
+    },
+    {
+      "kind": "scan",
+      "note": "one last scan so a batch published just before exit is picked up"
+    },
+    {
+      "kind": "assert",
+      "assert": {
+        "id": "S0.exit_code",
+        "group": "public_scenarios",
+        "points": 0,
+        "level": "info",
+        "kind": "exit_code_in",
+        "title": "the connector exits 0 or 2",
+        "why": "2 means completed with business exceptions and is the normal outcome of an exception-driven product, not a failure"
+      }
+    },
+    {
+      "kind": "assert",
+      "assert": {
+        "id": "S0.no_crash",
+        "group": "public_scenarios",
+        "points": 0,
+        "level": "info",
+        "kind": "no_stderr_panic",
+        "title": "no unhandled crash on stderr"
+      }
+    },
+    {
+      "kind": "assert",
+      "assert": {
+        "id": "S0.reports",
+        "group": "public_scenarios",
+        "points": 0,
+        "level": "info",
+        "kind": "report_schema",
+        "title": "run.json, postings.csv and exceptions.csv exist and carry the contract schema"
+      }
+    },
+    {
+      "kind": "assert",
+      "assert": {
+        "id": "S0.run_id",
+        "group": "public_scenarios",
+        "points": 0,
+        "level": "info",
+        "kind": "report_value",
+        "args": {
+          "field": "run_id",
+          "equals_run_id": true
+        },
+        "title": "run.json echoes the run id the harness supplied",
+        "why": "the run id is ours; a connector that invents one cannot be resumed with the same id"
+      }
+    },
+    {
+      "kind": "assert",
+      "assert": {
+        "id": "S0.batches",
+        "group": "public_scenarios",
+        "points": 0,
+        "level": "info",
+        "kind": "counter",
+        "args": {
+          "name": "twin.batches",
+          "min": 1
+        },
+        "title": "at least one batch reached the twin"
+      }
+    },
+    {
+      "kind": "assert",
+      "assert": {
+        "id": "S0.legacy_profile",
+        "group": "public_scenarios",
+        "points": 0,
+        "level": "info",
+        "kind": "legacy_profile_used",
+        "title": "the legacy delivery was parsed inside the twin, not pre-transformed outside it",
+        "why": "the connector relays the KRED-EXP bytes unparsed and declares profile kredexp-2.1; the twin owns the parse"
+      }
+    },
+    {
+      "kind": "assert",
+      "assert": {
+        "id": "S0.closure",
+        "group": "public_scenarios",
+        "points": 0,
+        "level": "info",
+        "kind": "receipt_closure",
+        "args": {
+          "require_done": true,
+          "min_batches": 1
+        },
+        "title": "every batch got a complete receipt, DONE included"
+      }
+    },
+    {
+      "kind": "assert",
+      "assert": {
+        "id": "S0.terminal_states",
+        "group": "public_scenarios",
+        "points": 0,
+        "level": "info",
+        "kind": "terminal_states_sum_to_source_count",
+        "title": "every record the twin saw reached exactly one terminal state"
+      }
+    },
+    {
+      "kind": "assert",
+      "assert": {
+        "id": "S0.soap",
+        "group": "public_scenarios",
+        "points": 0,
+        "level": "info",
+        "kind": "soap_call_count",
+        "args": {
+          "min_retry_of_retryable": true,
+          "no_retry_of_permanent": true
+        },
+        "title": "the retryable FX fault was retried and the permanent one was not"
+      }
+    },
+    {
+      "kind": "assert",
+      "assert": {
+        "id": "S0.duplicates",
+        "group": "public_scenarios",
+        "points": 0,
+        "level": "info",
+        "kind": "counter",
+        "args": {
+          "name": "erp.duplicate_document_attempts",
+          "equals": 0
+        },
+        "title": "no source document was posted twice"
+      }
+    },
+    {
+      "kind": "assert",
+      "assert": {
+        "id": "S0.budget",
+        "group": "public_scenarios",
+        "points": 0,
+        "level": "info",
+        "kind": "request_budget",
+        "title": "the run fits the published request budget"
+      }
+    },
+    {
+      "kind": "assert",
+      "assert": {
+        "id": "S0.digest",
+        "group": "public_scenarios",
+        "points": 0,
+        "level": "info",
+        "kind": "state_digest",
+        "title": "the twin's state digest",
+        "why": "the digest is a hash over natural keys and payloads only, so it is blind to channel, format and batching"
+      }
+    }
+  ]
+}

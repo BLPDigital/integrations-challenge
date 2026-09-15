@@ -1,0 +1,6 @@
+{{define "content" -}}
+{{with .Data}}
+{{if .Search}}{{template "search" .Search}}{{end}}
+{{range .Sections}}{{template "section" .}}{{end}}
+{{end}}
+{{- end}}

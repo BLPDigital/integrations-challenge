@@ -1,0 +1,363 @@
+/* BLP Digital twin inspection UI.
+ *
+ * Palette, type and layout are the brand book's, and nothing here fetches
+ * anything: no imported stylesheet, no downloaded typeface, no external URL of
+ * any kind, so the interface renders identically with the network unplugged.
+ *
+ * Color discipline, which the brand book makes binding:
+ *   - Atlas Blue is every heading and every word of body text;
+ *   - BLP Blue is links and buttons only, never an inline text color;
+ *   - Pale Blue and Frosted Ice are surfaces;
+ *   - exactly two accent families appear, red for exceptions and rejects and
+ *     green for posted and accepted, on chips and notices only, which keeps
+ *     them far below a tenth of the visual surface;
+ *   - no fill, band or banner sits behind a title or a subtitle, there is no
+ *     bottom banner, and no rule divides two sections: sections are separated
+ *     by space.
+ */
+
+:root {
+  --white: #ffffff;
+  --atlas: #162b54;
+  --blp: #2e75ff;
+  --pale: #e0f0ff;
+  --frost: #f8fcff;
+  --red-light: #ffe3e3;
+  --red-base: #f93a3a;
+  --green-light: #d8f2e0;
+  --green-base: #2e9c50;
+  --font: Roboto, Lato, "Helvetica Neue", Arial, sans-serif;
+  --gutter: 32px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--white);
+  color: var(--atlas);
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.5;
+  /* The body never scrolls sideways: wide content scrolls inside its own
+     container instead. */
+  overflow-x: hidden;
+}
+
+.wrap {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 80px;
+}
+
+/* Header: the official lockup, the navigation, the run's identity. No band
+   behind any of it. */
+.masthead { padding: 48px 0 0; }
+
+.lockup {
+  display: block;
+  width: 160px;
+  height: auto;
+  /* Clear space on all sides, at least the width of the "b". */
+  margin: 0 0 40px;
+}
+
+.nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gutter);
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+  font-size: 16px;
+}
+
+.nav a { font-weight: 400; }
+.nav .here { color: var(--atlas); font-weight: 600; text-decoration: none; }
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gutter);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+}
+
+.meta b { font-weight: 500; }
+
+.toggle {
+  display: inline-block;
+  margin: 24px 0 0;
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: var(--blp);
+  color: var(--white);
+  font-size: 16px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+/* Titles sit directly on the page surface. */
+h1 {
+  margin: 56px 0 8px;
+  font-size: 36px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.subtitle {
+  margin: 0 0 8px;
+  max-width: 90ch;
+  font-size: 20px;
+  font-weight: 400;
+}
+
+h2 {
+  margin: 0 0 8px;
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.note {
+  margin: 0 0 24px;
+  max-width: 90ch;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+/* Sections are separated by space alone. */
+section { margin: 56px 0 0; }
+
+a { color: var(--blp); text-decoration: none; }
+a:hover, a:focus { text-decoration: underline; }
+
+/* Notices explain a degraded or alarming view. A filled surface is fine here:
+   a notice is body content, not a title. */
+.notices { margin: 24px 0 0; padding: 0; list-style: none; }
+
+.notice {
+  margin: 0 0 12px;
+  padding: 16px 20px;
+  border-radius: 8px;
+  background: var(--red-light);
+  font-size: 16px;
+  max-width: 110ch;
+}
+
+/* Tiles: one number with its label, on a Pale Blue surface. */
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--gutter);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tile {
+  padding: 20px 24px;
+  border-radius: 8px;
+  background: var(--pale);
+}
+
+.tile.red { background: var(--red-light); }
+.tile.green { background: var(--green-light); }
+
+.tile .label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.tile .value {
+  display: block;
+  margin: 6px 0 0;
+  font-size: 28px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.tile .tilenote {
+  display: block;
+  margin: 6px 0 0;
+  font-size: 14px;
+}
+
+/* Tables. Wide ones scroll inside this container; no rules, no borders. */
+.scroll {
+  overflow-x: auto;
+  max-width: 100%;
+  border-radius: 8px;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 14px;
+}
+
+th {
+  padding: 10px 14px;
+  background: var(--pale);
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+
+td {
+  padding: 10px 14px;
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+tbody tr:nth-child(even) td { background: var(--frost); }
+
+td.key, td.num {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+  overflow-wrap: anywhere;
+}
+
+td.num { text-align: right; }
+
+td.wrap {
+  white-space: normal;
+  min-width: 24ch;
+  max-width: 60ch;
+}
+
+.empty { margin: 0; padding: 16px 0 0; font-size: 14px; }
+
+/* Chips: the two permitted accent families, on a small surface, with the label
+   carrying the meaning so color is never the only signal. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--pale);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.chip::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--atlas);
+}
+
+.chip.red { background: var(--red-light); }
+.chip.red::before { background: var(--red-base); }
+.chip.green { background: var(--green-light); }
+.chip.green::before { background: var(--green-base); }
+
+/* Preformatted blocks: canonical payloads, receipts, delivered bytes. A
+   monospace stack is used here and nowhere else, because a hex dump and a
+   64-character content address only align in one. */
+.pre {
+  margin: 0;
+  padding: 20px 24px;
+  border-radius: 8px;
+  background: var(--frost);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.55;
+  white-space: pre;
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.prelabel { margin: 0 0 8px; font-size: 14px; font-weight: 500; }
+
+/* The audit chain, as an ordered list of links. */
+.chain { margin: 0; padding: 0; list-style: none; }
+
+.chain li {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: 16px;
+  margin: 0 0 20px;
+}
+
+.chain .step {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--pale);
+  font-size: 14px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.chain li.red .step { background: var(--red-light); }
+.chain li.green .step { background: var(--green-light); }
+.chain .kind { font-size: 14px; font-weight: 500; }
+.chain .value { font-size: 16px; overflow-wrap: anywhere; }
+.chain .detail { font-size: 14px; }
+
+/* Search: one field and one button. */
+.search { margin: 32px 0 0; }
+.search label { display: block; font-size: 14px; font-weight: 500; margin: 0 0 8px; }
+
+.search input[type="text"] {
+  width: 100%;
+  max-width: 640px;
+  padding: 10px 14px;
+  border: 1px solid var(--pale);
+  border-radius: 8px;
+  background: var(--frost);
+  color: var(--atlas);
+  font-family: var(--font);
+  font-size: 16px;
+}
+
+.search button {
+  margin: 12px 0 0;
+  padding: 8px 16px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--blp);
+  color: var(--white);
+  font-family: var(--font);
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.search .hint { margin: 8px 0 0; max-width: 90ch; font-size: 14px; }
+
+/* Paging. */
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--gutter);
+  margin: 20px 0 0;
+  font-size: 14px;
+}
+
+/* Footer text sits on the page background: no banner, no strip, no fill. */
+.foot { margin: 80px 0 56px; font-size: 14px; }
+
+@media (max-width: 834px) {
+  .wrap { padding: 0 32px; }
+  h1 { font-size: 28px; }
+  .masthead { padding-top: 32px; }
+  section { margin-top: 40px; }
+}
+
+@media (max-width: 375px) {
+  .wrap { padding: 0 16px; }
+}

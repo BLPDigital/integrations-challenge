@@ -1,0 +1,276 @@
+/* ERP web UI stylesheet.
+ *
+ * Deliberately plain, and that is a requirement rather than an unfinished
+ * stylesheet. This is the CUSTOMER's system of record and it sits next to the
+ * twin's BLP-branded UI in every review, so the two must be unmistakable at a
+ * glance: gray and white surfaces, boxy bordered tables, a monospace-leaning
+ * stack for data, no wordmark, square corners, flat fills only, and none of the
+ * corporate palette. Red appears only for a genuine warning state, which here
+ * means a duplicate posting attempt or a returned fault.
+ *
+ * Nothing is fetched: no stylesheet include, no webfont, no external asset of any
+ * kind, so the UI renders identically on a machine with no network.
+ */
+
+:root {
+  color-scheme: light;
+
+  --ink: #111111;
+  --ink-soft: #555555;
+  --ink-faint: #808080;
+  --paper: #ffffff;
+  --surface: #f2f2f2;
+  --surface-alt: #f8f8f8;
+  --chrome: #d9d9d9;
+  --chrome-dark: #c2c2c2;
+  --rule: #8a8a8a;
+  --rule-soft: #b8b8b8;
+  --link: #0000cc;
+  --link-visited: #551a8b;
+  --warn-ink: #8b0000;
+  --warn-surface: #ffecec;
+  --warn-rule: #8b0000;
+
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --sans: system-ui, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--surface);
+  color: var(--ink);
+  font: 13px/1.45 var(--sans);
+}
+
+a { color: var(--link); }
+a:visited { color: var(--link-visited); }
+
+/* Identity strip. It names the system on every screen, because a reviewer
+ * looking at a screenshot has to know which of the two systems it came from. */
+.ident {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 6px 10px;
+  background: var(--chrome-dark);
+  border-bottom: 1px solid var(--rule);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+.ident .sys { font-weight: 700; letter-spacing: 1px; }
+.ident .sub { color: var(--ink-soft); }
+.ident .spacer { flex: 1 1 auto; }
+.ident .refresh { font-family: var(--mono); }
+
+.kv { color: var(--ink-soft); }
+.kv b { color: var(--ink); font-weight: 700; }
+
+/* Navigation. Boxy tabs, no rounding, no active color beyond a heavier box. */
+nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  background: var(--chrome);
+  border-bottom: 1px solid var(--rule);
+  padding: 0 6px;
+}
+nav a {
+  display: block;
+  padding: 5px 10px;
+  border: 1px solid var(--rule-soft);
+  border-bottom: 0;
+  border-left-width: 0;
+  background: var(--surface-alt);
+  color: var(--ink);
+  text-decoration: none;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+nav a:first-child { border-left-width: 1px; }
+nav a:hover { background: var(--paper); text-decoration: underline; }
+nav a.on { background: var(--paper); font-weight: 700; border-bottom: 2px solid var(--ink); }
+
+main { padding: 12px 10px 24px; max-width: 100%; }
+
+h1 {
+  margin: 4px 0 2px;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+h2 {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--ink-soft);
+}
+p.lede { margin: 0 0 12px; max-width: 74ch; color: var(--ink-soft); }
+p.note { margin: 4px 0 0; max-width: 96ch; color: var(--ink-soft); font-size: 12px; }
+
+/* Notices. Two kinds and no more. The red one is the double-posting warning and
+ * has to be impossible to miss. */
+.banner {
+  border: 1px solid var(--rule);
+  background: var(--paper);
+  padding: 8px 10px;
+  margin: 0 0 12px;
+}
+.banner p { margin: 0 0 4px; }
+.banner p:last-child { margin-bottom: 0; }
+.banner .btitle { font-family: var(--mono); font-weight: 700; }
+.banner.warn {
+  border: 3px solid var(--warn-rule);
+  background: var(--warn-surface);
+  color: var(--warn-ink);
+}
+.banner.warn .btitle { font-size: 15px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+/* Summary blocks. Separation by border, because this UI is supposed to look like
+ * a form on a terminal, not like a card layout. */
+.sections {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 0 12px;
+}
+.sections section {
+  border: 1px solid var(--rule);
+  background: var(--paper);
+  padding: 8px 10px;
+  min-width: 260px;
+}
+dl {
+  display: grid;
+  grid-template-columns: max-content auto;
+  gap: 1px 14px;
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+dt { color: var(--ink-soft); }
+dd { margin: 0; font-weight: 700; }
+dd.warn { color: var(--warn-ink); background: var(--warn-surface); padding: 0 3px; }
+dd.muted { color: var(--ink-faint); font-weight: 400; }
+
+/* Search and filter forms. Plain GET forms: no script, and the browser's own
+ * history is the state. */
+form.search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  border: 1px solid var(--rule);
+  background: var(--paper);
+  padding: 6px 8px;
+  margin: 0 0 8px;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+form.search label { color: var(--ink-soft); }
+input[type=text], select {
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 3px 4px;
+  border: 1px solid var(--rule);
+  background: var(--paper);
+  color: var(--ink);
+}
+button {
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 3px 10px;
+  border: 1px solid var(--rule);
+  background: var(--chrome);
+  color: var(--ink);
+  cursor: pointer;
+}
+button:hover { background: var(--chrome-dark); }
+
+.summary {
+  border: 1px solid var(--rule);
+  background: var(--paper);
+  padding: 8px 10px;
+  margin: 0 0 10px;
+}
+.summary .totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  font-family: var(--mono);
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+.summary .ratio { font-weight: 700; color: var(--ink); }
+
+/* Tables. A wide table scrolls inside its own box; the page body never scrolls
+ * horizontally. */
+.tablebox {
+  overflow-x: auto;
+  max-width: 100%;
+  border: 1px solid var(--rule);
+  background: var(--paper);
+}
+table {
+  border-collapse: collapse;
+  width: max-content;
+  min-width: 100%;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+table.mini { width: auto; min-width: 0; border: 1px solid var(--rule); }
+th, td {
+  border: 1px solid var(--rule-soft);
+  padding: 3px 7px;
+  text-align: left;
+  white-space: nowrap;
+  vertical-align: top;
+}
+th {
+  background: var(--chrome);
+  font-weight: 700;
+  position: sticky;
+  top: 0;
+}
+tbody tr:nth-child(even) { background: var(--surface-alt); }
+tbody tr:hover { background: var(--chrome); }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+td.key { font-weight: 700; }
+td.muted { color: var(--ink-faint); }
+td.warn { color: var(--warn-ink); background: var(--warn-surface); font-weight: 700; }
+td.empty { color: var(--ink-faint); font-style: italic; white-space: normal; }
+
+/* A flagged row is the one thing on this screen a reviewer must not be able to
+ * scroll past. */
+tbody tr.flagged, tbody tr.flagged:nth-child(even) {
+  background: var(--warn-surface);
+  color: var(--warn-ink);
+  outline: 2px solid var(--warn-rule);
+  outline-offset: -2px;
+}
+tbody tr.flagged:hover { background: #ffdcdc; }
+tbody tr.flagged td { border-color: var(--warn-rule); font-weight: 700; }
+
+.pager {
+  margin: 6px 0 0;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+.pager .sep { color: var(--ink-faint); padding: 0 2px; }
+.pager .off { color: var(--ink-faint); }
+.pager a { margin-right: 8px; }
+
+footer {
+  border-top: 1px solid var(--rule);
+  background: var(--chrome);
+  padding: 8px 10px;
+  color: var(--ink-soft);
+  font-size: 12px;
+  max-width: 100%;
+}

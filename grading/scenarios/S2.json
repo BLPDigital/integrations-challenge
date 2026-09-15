@@ -1,0 +1,243 @@
+{
+  "id": "S2",
+  "visibility": "public",
+  "title": "delta with dirty data and chaos: the second night",
+  "purpose": "Two phases in one scenario, because a watermark that is not read back by a second process is not a watermark. Phase a is a cold load. Then the ERP moves on: changed suppliers and purchase orders, new rate rows, a second legacy delivery that re-sends 40 invoices unchanged and amends 12 of them. Phase b must pull the delta only, dedupe the re-sends by content, raise the amendment as a blocking exception, and post nothing twice. Fault injection is ON for both phases: injected faults are content addressed, so they hit the same logical requests no matter what order you issue them in, and every injected fault succeeds on the retry of that same request.",
+  "seed_scenario": "S1",
+  "seed": 20260416,
+  "erp_quota": 1400,
+  "twin_quota": 640,
+  "chaos": true,
+  "reference_importer": true,
+  "golden": {
+    "state_digest": "8023d639f9ce1849f5b946cbe831c27209c88872c7cd6d607ec7a240b7cbab30",
+    "digest_pinned_by": "reference run reviewed 2026-09-01 after the delta sequence change: the first changed purchase order line now sits at exactly its own watermark plus one, so an exclusive watermark loses it and the rule is tested. 866 exceptions and 5246 documents, both exact."
+  },
+  "steps": [
+    {
+      "kind": "reset"
+    },
+    {
+      "kind": "seed"
+    },
+    {
+      "kind": "run_connector",
+      "phase": "a",
+      "timeout_s": 900
+    },
+    {
+      "kind": "scan"
+    },
+    {
+      "kind": "erp_advance",
+      "scenario": "S2",
+      "note": "the delta: changed master data, new rate rows, a second delivery with re-sends and amendments"
+    },
+    {
+      "kind": "run_connector",
+      "phase": "b",
+      "timeout_s": 900
+    },
+    {
+      "kind": "scan"
+    },
+    {
+      "kind": "assert",
+      "assert": {
+        "id": "S2.exit_code",
+        "group": "public_scenarios",
+        "points": 0,
+        "level": "info",
+        "kind": "exit_code_in",
+        "title": "both invocations exit 0 or 2"
+      }
+    },
+    {
+      "kind": "assert",
+      "assert": {
+        "id": "S2.digest",
+        "group": "public_scenarios",
+        "points": 6,
+        "level": "scored",
+        "kind": "state_digest",
+        "title": "the twin's state digest after the delta matches the golden value",
+        "why": "a re-sent invoice that is byte-identical must leave the digest untouched; an amended one must not overwrite silently"
+      }
+    },
+    {
+      "kind": "assert",
+      "assert": {
+        "id": "S2.exceptions",
+        "group": "public_scenarios",
+        "points": 4,
+        "level": "scored",
+        "kind": "exceptions_set_exactly",
+        "title": "the open exception queue is exactly the expected set, amendments included",
+        "why": "the 12 amended invoices must each raise EXC_DUPLICATE_INVOICE_AMENDED rather than producing a second posting"
+      }
+    },
+    {
+      "kind": "assert",
+      "assert": {
+        "id": "S2.pending",
+        "group": "public_scenarios",
+        "points": 2,
+        "level": "scored",
+        "kind": "proposal_status_count",
+        "args": {
+          "pending_zero": true
+        },
+        "title": "no proposal is left pending after the second night"
+      }
+    },
+    {
+      "kind": "assert",
+      "assert": {
+        "id": "S2.documents",
+        "group": "public_scenarios",
+        "points": 1,
+        "level": "scored",
+        "kind": "erp_document_set",
+        "title": "the ERP holds exactly the expected document set"
+      }
+    },
+    {
+      "kind": "assert",
+      "assert": {
+        "id": "S2.budget",
+        "group": "public_scenarios",
+        "points": 2,
+        "level": "scored",
+        "kind": "request_budget",
+        "title": "both phases together fit the published budget"
+      }
+    },
+    {
+      "kind": "assert",
+      "assert": {
+        "id": "S2.watermark",
+        "group": "robustness",
+        "points": 1,
+        "level": "scored",
+        "kind": "no_full_reload_on_second_run",
+        "title": "the second phase pulled a delta, not a full load",
+        "why": "no batch of the second run may declare a full reload: run.json's full_load must be false and so must the twin's own record of every batch it accepted. What this asserts is exactly that, on both sides. The watermark itself is not read here, because a run that discarded it cannot reach S2's digest or its exception set anyway: reloading everything re-sends 5'000 invoices the twin already holds, and the amended twelve stop being amendments."
+      }
+    },
+    {
+      "kind": "assert",
+      "assert": {
+        "id": "S2.no_duplicates",
+        "group": "robustness",
+        "points": 3,
+        "level": "scored",
+        "kind": "counter",
+        "args": {
+          "name": "erp.duplicate_document_attempts",
+          "equals": 0
+        },
+        "title": "no source document was posted twice across the two phases",
+        "why": "Scored in S2 and not in S1: a counter of duplicate attempts can only move when something is delivered or posted twice, and S1 delivers each record once with fault injection off. The same assertion in S1 was unloseable - every submission got its points for free - and the mutation gate proved it: three different idempotency-key defects escaped S1 without costing a point. S2 retries under injected faults and re-sends invoices, so the counters mean something there."
+      }
+    },
+    {
+      "kind": "assert",
+      "assert": {
+        "id": "S2.no_duplicate_apply",
+        "group": "robustness",
+        "points": 1,
+        "level": "scored",
+        "kind": "counter",
+        "title": "no record was applied to the twin twice",
+        "args": {
+          "name": "twin.duplicate_apply_attempts",
+          "equals": 0
+        },
+        "why": "The twin's half of the same property: a chunk retried after an applied-then-500 answer must replay the stored result, not apply its records again. Scored in S2 and not in S1: a counter of duplicate attempts can only move when something is delivered or posted twice, and S1 delivers each record once with fault injection off. The same assertion in S1 was unloseable - every submission got its points for free - and the mutation gate proved it: three different idempotency-key defects escaped S1 without costing a point. S2 retries under injected faults and re-sends invoices, so the counters mean something there."
+      }
+    },
+    {
+      "kind": "assert",
+      "assert": {
+        "id": "S2.idempotency_stable",
+        "group": "integrity",
+        "points": 0,
+        "level": "info",
+        "kind": "idempotency_keys_stable_across",
+        "args": {
+          "phases": [
+            "a",
+            "b"
+          ]
+        },
+        "title": "a proposal posted in both phases carried the same idempotency key",
+        "why": "a key that changes between runs is how a resume creates a second document; the run id must not be in it"
+      }
+    },
+    {
+      "kind": "assert",
+      "assert": {
+        "id": "S2.retry_discipline",
+        "group": "robustness",
+        "points": 1,
+        "level": "scored",
+        "kind": "no_retry_on_nonretriable",
+        "title": "nothing marked retriable false was retried, with chaos on",
+        "why": "Scored in S2 and not in S1: S1 runs with fault injection off, so nothing there ever answers 429 or retriable:false and the same assertion in S1 was vacuously green. It could not have caught a client that retries what it must not, which is the whole point of it. S2 is the scenario with chaos."
+      }
+    },
+    {
+      "kind": "assert",
+      "assert": {
+        "id": "S2.no_lockout",
+        "group": "robustness",
+        "points": 1,
+        "level": "scored",
+        "kind": "erp_lockouts_eq_0",
+        "title": "the connector was never quarantined",
+        "why": "A client that ignores Retry-After, or hammers a 429 without backing off, is quarantined for 200 quota units and loses the rest of the run. Scored in S2 and not in S1: S1 runs with fault injection off, so nothing there ever answers 429 or retriable:false and the same assertion in S1 was vacuously green. It could not have caught a client that retries what it must not, which is the whole point of it. S2 is the scenario with chaos."
+      }
+    },
+    {
+      "kind": "assert",
+      "assert": {
+        "id": "S2.wasted_retries",
+        "group": "integrity",
+        "points": 0,
+        "level": "info",
+        "kind": "wasted_retries_max",
+        "args": {
+          "max": 40
+        },
+        "title": "retries stayed within a disciplined budget",
+        "why": "an injected fault succeeds on the retry of the same logical request, so more than a handful of extra attempts means the retry loop is storming"
+      }
+    },
+    {
+      "kind": "assert",
+      "assert": {
+        "id": "S2.closure",
+        "group": "integrity",
+        "points": 0,
+        "level": "info",
+        "kind": "receipt_closure",
+        "args": {
+          "require_done": true,
+          "min_batches": 2
+        },
+        "title": "every batch of both phases closes"
+      }
+    },
+    {
+      "kind": "assert",
+      "assert": {
+        "id": "S2.counter_crosscheck",
+        "group": "integrity",
+        "points": 0,
+        "level": "info",
+        "kind": "counter_crosscheck",
+        "title": "run.json's counters agree with the servers' metrics"
+      }
+    }
+  ]
+}
