@@ -1,0 +1,15 @@
+subject_key,subject_type,stage,code,field,message,source_batch_id,source_file_or_chunk,source_line_or_ordinal
+00000004130004716,invoice,match,EXC_PO_NOT_FOUND,po_number,the referenced purchase order does not exist,capture-KRED_0100_20260416_001,KRED_0100_20260416_001.txt,22
+00000004170004770,invoice,match,EXC_UOM_UNMAPPABLE,uom,unit of measure PAL has no conversion to a base unit,capture-KRED_0100_20260416_001,KRED_0100_20260416_001.txt,203
+00000004170004777,invoice,match,EXC_UOM_UNCONVERTIBLE,quantity,the base quantity of unit CTN is not exact at three decimals,capture-KRED_0100_20260416_001,KRED_0100_20260416_001.txt,231
+00000004180004790,invoice,post,E_ACK_REJECTED,posting,ERP_AMOUNT_MISMATCH: the ERP refused the posting; a business rejection is never retried,,,
+00000004260004763,invoice,match,EXC_FX_RATE_MISSING,currency,no DAILY exchange rate covers the posting date for this currency,capture-KRED_0100_20260416_001,KRED_0100_20260416_001.txt,183
+00000004390004743,invoice,match,EXC_TOTALS_MISMATCH,gross_amount,the gross amount is not the sum of the line amounts plus the VAT amount,capture-KRED_0100_20260416_001,KRED_0100_20260416_001.txt,115
+00000004630004783,invoice,match,EXC_FX_RATE_MISSING,company_code,"this company code has no exchange rate table, so a foreign currency invoice of it cannot be converted",capture-KRED_0200_20260416_001,KRED_0200_20260416_001.txt,38
+00000004630004804,invoice,match,EXC_PO_CLOSED,po_number,the referenced purchase order is closed or cancelled,capture-KRED_0100_20260416_001,KRED_0100_20260416_001.txt,319
+00000005060004722,invoice,match,EXC_PO_CLOSED,po_number,the referenced purchase order is closed or cancelled,capture-KRED_0200_20260416_001,KRED_0200_20260416_001.txt,6
+00000005270004756,invoice,match,EXC_FX_RATE_MISSING,currency,no DAILY exchange rate covers the posting date for this currency,capture-KRED_0100_20260416_001,KRED_0100_20260416_001.txt,159
+00000005300004729,invoice,match,EXC_PO_SUPPLIER_MISMATCH,po_number,the referenced purchase order belongs to another supplier,capture-KRED_0100_20260416_001,KRED_0100_20260416_001.txt,63
+00000005840004736,invoice,match,EXC_SUPPLIER_BLOCKED,supplier_number,the invoice's supplier is blocked,capture-KRED_0100_20260416_001,KRED_0100_20260416_001.txt,91
+00000005940004749,invoice,match,EXC_COST_CENTER_UNKNOWN,cost_center,"the cost center is unknown, blocked, or not configured for the company code",capture-KRED_0100_20260416_001,KRED_0100_20260416_001.txt,135
+00000006000004797,invoice,match,EXC_PO_NOT_FOUND,po_number,the referenced purchase order does not exist,capture-KRED_0100_20260416_001,KRED_0100_20260416_001.txt,295

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+BLP Digital — Brand Stamp Only
+Color: BLP Blue #2E75FF
+Source: BLP brand guidelines, 2026
+viewBox cropped to the stamp's actual bounds (translated so origin = 0,0)
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 213.8 127.18" role="img" aria-label="BLP Digital brand stamp">
+  <path fill="#2E75FF" transform="translate(0,-6.27)" d="M149.67,6.27h-85.53C28.73,6.27,0,34.76,0,69.86s28.73,63.59,64.13,63.59h85.53c35.44,0,64.13-28.49,64.13-63.59S185.07,6.27,149.67,6.27ZM150.91,86.07c0,5.59-3.01,10.73-7.85,13.51l-28.28,16.18c-4.87,2.78-10.86,2.78-15.73,0l-28.28-16.18c-4.87-2.78-7.85-7.92-7.85-13.51v-32.36c0-5.55,3.01-10.73,7.85-13.51l28.28-16.18c4.87-2.78,10.86-2.78,15.73,0l28.28,16.18c4.87,2.78,7.85,7.92,7.85,13.51v32.36Z"/>
+</svg>

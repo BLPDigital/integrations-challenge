@@ -1,0 +1,34 @@
+{{define "layout"}}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Title}} - ERP</title>
+<link rel="stylesheet" href="{{.Stylesheet}}">
+</head>
+<body>
+<div class="ident">
+  <span class="sys">ERP</span>
+  <span class="sub">system of record - read only</span>
+  <span class="spacer"></span>
+  {{if .Scenario}}<span class="kv">scenario <b>{{.Scenario}}</b></span>
+  <span class="kv">seed <b>{{.Seed}}</b></span>{{end}}
+  <a class="refresh" href="{{.RefreshHref}}">{{.RefreshLabel}}</a>
+</div>
+<nav>
+  {{range .Nav}}<a href="{{.Href}}"{{if eq .Name $.Active}} class="on"{{end}}>{{.Title}}</a>{{end}}
+</nav>
+<main>
+  <h1>{{.Heading}}</h1>
+  {{if .Lede}}<p class="lede">{{.Lede}}</p>{{end}}
+  {{template "content" .}}
+</main>
+<footer>
+  Mock ERP of the integrations challenge. Deliberately unbranded, so this screen
+  and the twin's can never be mistaken for each other. Read-only, free of charge,
+  no authentication, no network.
+</footer>
+{{if .RefreshMillis}}<script>setTimeout(function(){location.reload();}, {{.RefreshMillis}});</script>{{end}}
+</body>
+</html>
+{{end}}

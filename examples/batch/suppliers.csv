@@ -1,0 +1,4 @@
+supplier_number,name,country,currency,iban,vat_number,payment_terms_days,blocked,change_seq
+0000000417,Meier Praezision AG,CH,CHF,CH9300762011623852957,CHE-123.456.789 MWST,30,false,100417
+0000417,Meier Praezision (Migrationsrest),CH,CHF,CH9300762011623852958,CHE-123.456.789 MWST,30,false,100418
+0000000418,Wyss Oberflaechen GmbH,CH,CHF,CH4409000000110000556,CHE-234.567.891 MWST,60,false,100419

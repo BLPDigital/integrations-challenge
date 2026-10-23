@@ -1,0 +1,119 @@
+{{define "shell" -}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Title}} · BLP digital twin</title>
+<link rel="stylesheet" href="{{.StyleURL}}">
+</head>
+<body>
+<div class="wrap">
+<header class="masthead">
+  <a href="{{.Base}}/"><img class="lockup" src="{{.LogoURL}}" width="160" alt="BLP Digital"></a>
+  <ul class="nav">
+    {{range .Nav}}<li>{{if .Active}}<span class="here">{{.Label}}</span>{{else}}<a href="{{.Href}}">{{.Label}}</a>{{end}}</li>{{end}}
+  </ul>
+  {{if .Meta}}<ul class="meta">{{range .Meta}}<li>{{.Label}} <b>{{.Value}}</b></li>{{end}}</ul>{{end}}
+  <a class="toggle" href="{{.RefreshHref}}">{{.RefreshLabel}}</a>
+</header>
+
+<main>
+<h1>{{.Title}}</h1>
+{{if .Subtitle}}<p class="subtitle">{{.Subtitle}}</p>{{end}}
+{{if .Notices}}<ul class="notices">{{range .Notices}}<li class="notice">{{.}}</li>{{end}}</ul>{{end}}
+
+{{template "content" .}}
+</main>
+
+<p class="foot">Read-only. This interface reads the twin's revision store and its free admin
+surface, costs no quota, advances no virtual clock and can perturb nothing it shows.</p>
+</div>
+{{- if .RefreshSeconds}}
+<script>setTimeout(function () { location.reload(); }, {{.RefreshMs}});</script>
+{{- end}}
+</body>
+</html>
+{{- end}}
+
+{{/* One section: a title, an optional note, and exactly one kind of content. */}}
+{{define "section" -}}
+<section>
+<h2>{{.Title}}</h2>
+{{if .Note}}<p class="note">{{.Note}}</p>{{end -}}
+{{if .Tiles}}{{template "tiles" .Tiles}}{{end -}}
+{{if .Table}}{{template "table" .Table}}{{end -}}
+{{if .Chain}}{{template "chain" .Chain}}{{end -}}
+{{if .Pre}}{{template "pre" .}}{{end -}}
+{{if .Pager}}{{template "pager" .Pager}}{{end}}
+</section>
+{{- end}}
+
+{{define "tiles" -}}
+<ul class="tiles">
+{{range .}}<li class="tile{{if .Tone}} {{.Tone}}{{end}}">
+  {{if .Href}}<a class="label" href="{{.Href}}">{{.Label}}</a>{{else}}<span class="label">{{.Label}}</span>{{end}}
+  <span class="value">{{.Value}}</span>
+  {{- if .Note}}
+  <span class="tilenote">{{.Note}}</span>{{end}}
+</li>{{end}}
+</ul>
+{{- end}}
+
+{{define "table" -}}
+<div class="scroll">
+<table>
+<thead><tr>{{range .Headers}}<th>{{.}}</th>{{end}}</tr></thead>
+<tbody>
+{{range .Rows}}<tr>{{range .Cells}}{{template "cell" .}}{{end}}</tr>{{end}}
+</tbody>
+</table>
+</div>
+{{if not .Rows}}<p class="empty">{{if .Empty}}{{.Empty}}{{else}}nothing to show{{end}}</p>{{end}}
+{{- end}}
+
+{{define "cell" -}}
+<td{{if or .Mono .Wrap}} class="{{if .Mono}}key{{end}}{{if and .Mono .Wrap}} {{end}}{{if .Wrap}}wrap{{end}}"{{end}}>
+{{- if .Chip}}<span class="chip{{if .Tone}} {{.Tone}}{{end}}">{{.Chip}}</span>
+{{- else if .Href}}<a href="{{.Href}}">{{.Text}}</a>
+{{- else if and .Tone .Text}}<span class="chip {{.Tone}}">{{.Text}}</span>
+{{- else}}{{.Text}}{{end -}}
+</td>
+{{- end}}
+
+{{define "chain" -}}
+<ol class="chain">
+{{range .}}<li{{if .Tone}} class="{{.Tone}}"{{end}}>
+  <span class="step">{{.Step}}</span>
+  <span>
+    <span class="kind">{{.Kind}}</span><br>
+    <span class="value">{{if .Href}}<a href="{{.Href}}">{{.Label}}</a>{{else}}{{.Label}}{{end}}</span>
+    {{if .Detail}}<br><span class="detail">{{.Detail}}</span>{{end}}
+  </span>
+</li>{{end}}
+</ol>
+{{- end}}
+
+{{define "pre" -}}
+{{if .PreLabel}}<p class="prelabel">{{.PreLabel}}</p>{{end}}
+<pre class="pre">{{.Pre}}</pre>
+{{- end}}
+
+{{define "pager" -}}
+<p class="pager">
+{{if .FirstHref}}<a href="{{.FirstHref}}">First</a>{{end}}
+{{if .PrevHref}}<a href="{{.PrevHref}}">Previous</a>{{end}}
+{{if .NextHref}}<a href="{{.NextHref}}">Next</a>{{end}}
+{{if .Summary}}<span>{{.Summary}}</span>{{end}}
+</p>
+{{- end}}
+
+{{define "search" -}}
+<form class="search" method="get" action="{{.Action}}">
+<label for="{{.Field}}">{{.Label}}</label>
+<input type="text" id="{{.Field}}" name="{{.Field}}" value="{{.Value}}" autocomplete="off">
+{{range .Hidden}}{{if .Value}}<input type="hidden" name="{{.Label}}" value="{{.Value}}">{{end}}{{end}}
+<button type="submit">Search</button>
+{{if .Hint}}<p class="hint">{{.Hint}}</p>{{end}}
+</form>
+{{- end}}
